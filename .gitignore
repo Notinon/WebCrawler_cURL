@@ -1,0 +1,11 @@
+# Ignore the build directory
+build/
+vcpkg_installed/
+
+# Ignore Visual Studio specific files
+.vs/
+out/
+bin/
+
+# Ignore CMake user-specific presets
+CMakeUserPresets.json
