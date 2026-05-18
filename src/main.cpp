@@ -7,6 +7,8 @@ struct Memory_Structs{
     size_t size; // how much of the data we write
 };
 
+void search_for_links(GumboNode* node);
+
 Memory_Structs memory_struct;
 
 size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp);
@@ -19,13 +21,33 @@ int main(){
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data); // The function with which we store the data
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, memory_struct); 
     CURLcode result = curl_easy_perform(curl);
+    
+    GumboOutput* output = gumbo_parse(memory_struct.memory);
+    search_for_links(output->root);
+    gumbo_destroy_output(&kGumboDefaultOptions, output);
 
 
     curl_global_cleanup();
     return 0;
 }
 
-size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp){
+void search_for_links(GumboNode *node){
+    if(node->type != GUMBO_NODE_ELEMENT){
+        return;
+    }
+    GumboAttribute* href;
+    if(node->v.element.tag == GUMBO_TAG_A && (href = gumbo_get_attribute(&node->v.element.attributes, "href"))){
+        std::cout << href->value << '\n';
+    }
+
+    GumboVector* children = &node->v.element.children;
+    for(unsigned int i = 0; i < children->length; i++){
+        search_for_links(static_cast<GumboNode*>(children->data[i]));
+    }
+}
+
+size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp)
+{
 
     size_t realsize = size*nmemb; // Filesize = size of data * Number of memory bytes
     Memory_Structs *mem = (Memory_Structs*)userp; // Makes userp where we point to
