@@ -8,7 +8,8 @@ struct Memory_Structs{
 };
 
 void search_for_links(GumboNode* node);
-void search_for_script_links(GumboNode *node);
+void search_for_script_links(GumboNode* node);
+void search_for_images(GumboNode* node);
 
 Memory_Structs memory_struct;
 
@@ -65,6 +66,19 @@ void search_for_script_links(GumboNode *node){
     GumboVector* children = &node->v.element.children; // Walk farther into the HTML5 tree
     for(unsigned int i = 0; i < children->length; i++){
         search_for_script_links(static_cast<GumboNode*>(children->data[i]));
+    }
+}
+
+void search_for_images(GumboNode* node){
+    if(node->type != GUMBO_NODE_ELEMENT){
+        return;
+    }
+    GumboAttribute* rel = gumbo_get_attribute(&node->v.element.attributes, "rel");
+    GumboAttribute* href = gumbo_get_attribute(&node->v.element.attributes, "href");
+    GumboAttribute* type = gumbo_get_attribute(&node->v.element.attributes, "type");
+
+    if(node->v.element.tag == GUMBO_TAG_LINK && rel && href && type){
+        std::cout << "https://" << 
     }
 }
 
