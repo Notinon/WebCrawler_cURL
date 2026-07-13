@@ -1,6 +1,9 @@
 #include <iostream>
 #include <curl/curl.h>
 #include <gumbo.h>
+#include <unordered_set>
+#include <queue>
+#include <string>
 
 struct Memory_Structs{ 
     char* memory = nullptr; // The data we write
@@ -10,6 +13,8 @@ struct Memory_Structs{
 void search_for_links(GumboNode* node);
 void search_for_script_links(GumboNode* node);
 void search_for_images(GumboNode* node);
+
+void Crawl_process(CURL* curl);
 
 Memory_Structs memory_struct;
 
@@ -22,16 +27,7 @@ int main(){
     curl_easy_setopt(curl, CURLOPT_URL, "https://zeppuzzle.lennlepez.workers.dev/"); // test site
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data); // The function with which we store the data
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &memory_struct); 
-    CURLcode result = curl_easy_perform(curl);
-    if(result == CURLE_OK && memory_struct.memory != nullptr){
-        GumboOutput* output = gumbo_parse(memory_struct.memory);
-        search_for_links(output->root);
-        search_for_script_links(output->root);
-        gumbo_destroy_output(&kGumboDefaultOptions, output);
-    }else{
-        std::cerr << "CURL ERROR: " << curl_easy_strerror(result);
-    }
-    
+    Crawl_process(curl);
 
 
     curl_global_cleanup();
@@ -40,7 +36,7 @@ int main(){
 
 void search_for_links(GumboNode *node){
     if(node->type != GUMBO_NODE_ELEMENT){
-        return;
+        return; 
     }
     GumboAttribute* href;
     if(node->v.element.tag == GUMBO_TAG_A && (href = gumbo_get_attribute(&node->v.element.attributes, "href"))){
@@ -78,7 +74,12 @@ void search_for_images(GumboNode* node){
     GumboAttribute* type = gumbo_get_attribute(&node->v.element.attributes, "type");
 
     if(node->v.element.tag == GUMBO_TAG_LINK && rel && href && type){
-        std::cout << "https://" << 
+        std::cout << "https://" << href->value << '\n';
+    }
+
+    GumboVector* children = &node->v.element.children;
+    for(unsigned int i = 0; i < children->length; i++){
+        search_for_images(static_cast<GumboNode*>(children->data[i]));
     }
 }
 
@@ -101,4 +102,17 @@ size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp)
     mem->memory[mem->size] = 0;
 
     return realsize;
+}
+
+void Crawl_process(CURL* curl){
+    CURLcode result = curl_easy_perform(curl);
+    if(result == CURLE_OK && memory_struct.memory != nullptr){
+        GumboOutput* output = gumbo_parse(memory_struct.memory);
+        search_for_links(output->root);
+        search_for_script_links(output->root);
+        search_for_images(output->root);
+        gumbo_destroy_output(&kGumboDefaultOptions, output);
+    }else{
+        std::cerr << "CURL ERROR: " << curl_easy_strerror(result);
+    }
 }
