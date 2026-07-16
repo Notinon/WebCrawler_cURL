@@ -14,22 +14,34 @@ void search_for_links(GumboNode* node);
 void search_for_script_links(GumboNode* node);
 void search_for_images(GumboNode* node);
 
+struct Crawl_task{
+    std::string url;
+    int depth;
+};
+
 void Crawl_process(CURL* curl);
+std::queue<Crawl_task> urls;
+std::unordered_set<std::string> visited_urls;
 
 Memory_Structs memory_struct;
 
 size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp);
 
+int MAX_DEPTH;
+int Current_depth = 0;
+
+
 int main(){
     curl_global_init(CURL_GLOBAL_ALL); // initialise curl with all flags enabled
     
     CURL* curl = curl_easy_init(); // init curl easy handle
-    curl_easy_setopt(curl, CURLOPT_URL, "https://zeppuzzle.lennlepez.workers.dev/"); // test site
+    urls.push({"https://zeppuzzle.lennlepez.workers.dev/", Current_depth}); // test site first site
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data); // The function with which we store the data
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &memory_struct); 
     Crawl_process(curl);
-
-
+    
+    free(memory_struct.memory);
+    curl_easy_cleanup(curl);
     curl_global_cleanup();
     return 0;
 }
@@ -40,7 +52,8 @@ void search_for_links(GumboNode *node){
     }
     GumboAttribute* href;
     if(node->v.element.tag == GUMBO_TAG_A && (href = gumbo_get_attribute(&node->v.element.attributes, "href"))){
-        std::cout << href->value << '\n';
+        Current_depth += 1;
+        urls.push({href->value, Current_depth});
     }
 
     GumboVector* children = &node->v.element.children;
@@ -105,14 +118,21 @@ size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp)
 }
 
 void Crawl_process(CURL* curl){
+    curl_easy_setopt(curl ,CURLOPT_URL, urls.front().url.c_str());
     CURLcode result = curl_easy_perform(curl);
     if(result == CURLE_OK && memory_struct.memory != nullptr){
         GumboOutput* output = gumbo_parse(memory_struct.memory);
         search_for_links(output->root);
         search_for_script_links(output->root);
-        search_for_images(output->root);
         gumbo_destroy_output(&kGumboDefaultOptions, output);
     }else{
         std::cerr << "CURL ERROR: " << curl_easy_strerror(result);
     }
+    if (urls.empty() == false){
+        std::cout << urls.front().depth << '\t' << urls.front().url << '\n';
+        urls.pop();
+    }else{
+        return;
+    }
+    
 }
