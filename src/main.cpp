@@ -22,20 +22,19 @@ struct Crawl_task{
 void Crawl_process(CURL* curl);
 std::queue<Crawl_task> urls;
 std::unordered_set<std::string> visited_urls;
+int current_depth = 0;
 
 Memory_Structs memory_struct;
 
 size_t write_data(char *buffer, size_t size, size_t nmemb, void *userp);
 
-int MAX_DEPTH;
-int Current_depth = 0;
-
+const int MAX_DEPTH;
 
 int main(){
     curl_global_init(CURL_GLOBAL_ALL); // initialise curl with all flags enabled
     
     CURL* curl = curl_easy_init(); // init curl easy handle
-    urls.push({"https://zeppuzzle.lennlepez.workers.dev/", Current_depth}); // test site first site
+    urls.push({"https://zeppuzzle.lennlepez.workers.dev/"}); // test site first site
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data); // The function with which we store the data
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &memory_struct); 
     Crawl_process(curl);
@@ -52,8 +51,8 @@ void search_for_links(GumboNode *node){
     }
     GumboAttribute* href;
     if(node->v.element.tag == GUMBO_TAG_A && (href = gumbo_get_attribute(&node->v.element.attributes, "href"))){
-        Current_depth += 1;
-        urls.push({href->value, Current_depth});
+        current_depth += 1;
+        urls.push({href->value});
     }
 
     GumboVector* children = &node->v.element.children;
