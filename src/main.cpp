@@ -167,7 +167,7 @@ void Crawl_process(CURL* curl, std::queue<Crawl_task> &urls){
         if (result_robottxt == CURLE_OK && memory_struct.memory != nullptr){
             robotstxts.insert(memory_struct.memory);
         }
-         
+        // TODO: store base domain temporarily so you can get it back or try and replace /robots.txt and figure that mess out. 
         std::cout << "Next crawling: " << current.url << ' ' << "Depth: " << current.depth << '\n';
         std::this_thread::sleep_until(system_clock::now() + 2s);
 
